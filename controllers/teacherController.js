@@ -1,6 +1,9 @@
+// ============================================================
+// controllers/teacherController.js
+// ============================================================
+
 const { Teacher } = require("../models/User");
 
-// Creer un Teacher
 exports.ajouterTeacher = async (req, res) => {
   try {
     const nouveauTeacher = new Teacher(req.body);
@@ -11,7 +14,6 @@ exports.ajouterTeacher = async (req, res) => {
   }
 };
 
-// Lister tous les Teachers
 exports.listerTeachers = async (req, res) => {
   try {
     const teachers = await Teacher.find();
@@ -21,7 +23,6 @@ exports.listerTeachers = async (req, res) => {
   }
 };
 
-// Un teacher cree un cours
 exports.creerCoursParTeacher = async (req, res) => {
   try {
     const teacher = await Teacher.findById(req.params.id);

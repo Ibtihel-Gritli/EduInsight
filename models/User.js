@@ -1,41 +1,49 @@
-const mongoose = require("mongoose");
+// ============================================================
+// models/User.js
+// Modele User (Abstract) + discriminators Admin, Teacher, Student
+// ============================================================
 
-// Schema de base User
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+
 const userSchema = new mongoose.Schema(
   {
-    // _id: ObjectId -> genere automatiquement par MongoDB/Mongoose
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "teacher", "student"], required: true },
-    phone: { type: String},
+    phone: { type: String },
     avatar: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
   },
   {
-    timestamps: true, // ajoute automatiquement createdAt + updatedAt
+    timestamps: true,
     discriminatorKey: "role",
   }
 );
 
-//login():
-userSchema.methods.login = async function (motDePasse) {
-  if (motDePasse!== this.password) {
+// Hash automatique du mot de passe avant sauvegarde
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) {
+    return;
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+userSchema.methods.login = async function (motDePasseFourni) {
+  const motDePasseCorrect = await bcrypt.compare(motDePasseFourni, this.password);
+  if (!motDePasseCorrect) {
     throw new Error("Email ou mot de passe incorrect");
   }
   return this;
 };
 
-//logout()
 userSchema.methods.logout = function () {
   console.log("Utilisateur deconnecte : " + this.email);
 };
 
-//updateProfile(data)
 userSchema.methods.updateProfile = async function (data) {
-  if (data.firstName) {
-    this.firstName = data.firstName;
-  }
   if (data.lastName) {
     this.lastName = data.lastName;
   }
@@ -45,14 +53,13 @@ userSchema.methods.updateProfile = async function (data) {
   if (data.avatar) {
     this.avatar = data.avatar;
   }
-
   await this.save();
   return this;
 };
 
-//changePassword(current, new)
 userSchema.methods.changePassword = async function (current, nouveauMotDePasse) {
-  if (current !== this.password) {
+  const ancienCorrect = await bcrypt.compare(current, this.password);
+  if (!ancienCorrect) {
     throw new Error("Mot de passe actuel incorrect");
   }
   this.password = nouveauMotDePasse;
@@ -61,12 +68,8 @@ userSchema.methods.changePassword = async function (current, nouveauMotDePasse) 
 
 const User = mongoose.model("User", userSchema);
 
-//Admin
 const adminSchema = new mongoose.Schema({
-  permissions: {
-    type: [String],
-    default: [],
-  },
+  permissions: { type: [String], default: [] },
 });
 
 adminSchema.methods.createUser = async function (data) {
@@ -77,14 +80,10 @@ adminSchema.methods.createUser = async function (data) {
 
 const Admin = User.discriminator("admin", adminSchema);
 
-//Teacher
 const teacherSchema = new mongoose.Schema({
-  speciality: { type: String},
-  office: { type: String},
-  department: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Department",
-  },
+  speciality: { type: String },
+  office: { type: String },
+  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
 });
 
 teacherSchema.methods.createCourse = async function (data) {
@@ -97,23 +96,12 @@ teacherSchema.methods.createCourse = async function (data) {
 
 const Teacher = User.discriminator("teacher", teacherSchema);
 
-// Student
 const studentSchema = new mongoose.Schema({
-  studentCode: {
-    type: String,
-    unique: true,
-    sparse: true,
-  },
-  level: { type: String},
-  group: { type: String},
-  department: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Department",
-  },
-  enrollmentDate: {
-    type: Date,
-    default: Date.now,
-  },
+  studentCode: { type: String, unique: true, sparse: true },
+  level: { type: String },
+  group: { type: String },
+  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
+  enrollmentDate: { type: Date, default: Date.now },
 });
 
 studentSchema.methods.enrollCourse = async function (courseId) {

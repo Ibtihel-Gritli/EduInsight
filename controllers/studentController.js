@@ -1,6 +1,9 @@
+// ============================================================
+// controllers/studentController.js
+// ============================================================
+
 const { Student } = require("../models/User");
 
-// Creer un Student
 exports.ajouterStudent = async (req, res) => {
   try {
     const nouveauStudent = new Student(req.body);
@@ -11,7 +14,6 @@ exports.ajouterStudent = async (req, res) => {
   }
 };
 
-// Lister tous les Students
 exports.listerStudents = async (req, res) => {
   try {
     const students = await Student.find();
@@ -21,7 +23,6 @@ exports.listerStudents = async (req, res) => {
   }
 };
 
-// Un student s'inscrit a un cours
 exports.inscrireStudentACours = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id);
