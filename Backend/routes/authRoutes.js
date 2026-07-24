@@ -11,7 +11,11 @@ const authorize = require("../middlewares/roleMiddleware");
 
 router.post("/register", authController.register);
 router.post("/login", authController.login);
+router.post("/logout", protect, authController.logout);
+router.put("/profile", protect, authController.updateProfile);
+router.patch("/change-password", protect, authController.changePassword);
 
+// Route de test deja existante
 router.get("/profil", protect, authorize(["admin", "teacher", "student"]), (req, res) => {
   res.json({ message: "Profil utilisateur", user: req.user });
 });

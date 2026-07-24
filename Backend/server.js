@@ -23,6 +23,12 @@ app.use("/api/admins", require("./routes/adminRoutes"));
 app.use("/api/teachers", require("./routes/teacherRoutes"));
 app.use("/api/students", require("./routes/studentRoutes"));
 app.use("/api/courses", require("./routes/courseRoutes"));
+app.use("/api/departments", require("./routes/departmentRoutes"));
+app.use("/api/modules", require("./routes/moduleRoutes"));
+app.use("/api/quizzes", require("./routes/quizRoutes"));
+app.use("/api/quiz-attempts", require("./routes/quizAttemptRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
