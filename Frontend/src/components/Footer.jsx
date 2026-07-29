@@ -1,7 +1,7 @@
 function Footer() {
   return (
     <footer className="bg-gray-800 text-white text-center p-4">
-      <p>© 2026 MyApp. All rights reserved.</p>
+      <p>2026 EduInsight</p>
     </footer>
   )
 }

@@ -49,7 +49,7 @@ function Register() {
         <div className="p-10 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-slate-950">
           <div>
             <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-2xl mb-6">
-              🎓
+              EI
             </div>
             <span className="text-xs tracking-widest text-cyan-400 font-semibold">
               SMART EDUCATION
