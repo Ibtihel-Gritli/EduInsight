@@ -1,0 +1,178 @@
+// Page d inscription, avec useState pour chaque champ
+
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+
+function Register() {
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('student')
+
+  const navigate = useNavigate()
+
+  // fonction appelee quand l utilisateur clique sur "Create account"
+  async function handleSubmit(event) {
+    // empeche la page de se recharger
+    event.preventDefault()
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lastName: lastName,
+          email: email,
+          password: password,
+          role: role,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        navigate('/login')
+      } else {
+        alert(data.message)
+      }
+    } catch (error) {
+      alert('Erreur de connexion au serveur')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="w-full max-w-5xl bg-slate-900 rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border border-slate-800">
+
+        {/* Colonne gauche : presentation */}
+        <div className="p-10 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-slate-950">
+          <div>
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-2xl mb-6">
+              🎓
+            </div>
+            <span className="text-xs tracking-widest text-cyan-400 font-semibold">
+              SMART EDUCATION
+            </span>
+            <h1 className="text-3xl font-bold text-white mt-4 leading-tight">
+              Empower every learner with actionable insights.
+            </h1>
+            <p className="text-slate-400 mt-4">
+              Monitor course engagement, quiz outcomes, and student progress in a single polished workspace.
+            </p>
+          </div>
+
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 mt-8">
+            <p className="text-cyan-400 text-sm font-semibold mb-2">Why teams love EduInsight</p>
+            <ul className="text-slate-400 text-sm space-y-1">
+              <li>Real-time teaching analytics</li>
+              <li>Beautiful dashboards for instructors and students</li>
+              <li>Secure authentication and modern UI</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Colonne droite : formulaire */}
+        <div className="p-10 flex flex-col justify-center">
+          <span className="text-xs tracking-widest text-slate-500 font-semibold">
+            ACCESS PORTAL
+          </span>
+          <h2 className="text-2xl font-bold text-white mt-2 mb-6">Create account</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <div>
+              <label className="text-sm text-slate-400">Full Name</label>
+              <input
+                type="text"
+                name="lastName"
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+                placeholder="Amara Benali"
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400">Password</label>
+              <input
+                type="password"
+                name="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="********"
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500"
+                required
+              />
+            </div>
+
+            {/* Choix du role avec 2 boutons radio, relies au useState role */}
+            <div>
+              <label className="text-sm text-slate-400 block mb-2">Choose your role</label>
+              <div className="grid grid-cols-2 gap-3">
+
+                <label className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="student"
+                    checked={role === 'student'}
+                    onChange={(event) => setRole(event.target.value)}
+                    className="peer hidden"
+                  />
+                  <div className="p-3 rounded-lg border text-sm font-medium text-center bg-slate-800 border-slate-700 text-slate-300 peer-checked:bg-cyan-500/10 peer-checked:border-cyan-500 peer-checked:text-cyan-400">
+                    Student
+                  </div>
+                </label>
+
+                <label className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="teacher"
+                    checked={role === 'teacher'}
+                    onChange={(event) => setRole(event.target.value)}
+                    className="peer hidden"
+                  />
+                  <div className="p-3 rounded-lg border text-sm font-medium text-center bg-slate-800 border-slate-700 text-slate-300 peer-checked:bg-cyan-500/10 peer-checked:border-cyan-500 peer-checked:text-cyan-400">
+                    Teacher
+                  </div>
+                </label>
+
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-cyan-500 text-slate-950 font-semibold py-3 rounded-lg mt-2"
+            >
+              Create account
+            </button>
+
+            <p className="text-center text-slate-500 text-sm">
+              Already have an account?{' '}
+              <Link to="/login" className="text-cyan-400">Login</Link>
+            </p>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default Register
