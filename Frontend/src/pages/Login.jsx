@@ -1,45 +1,33 @@
 // ============================================================
 // src/pages/Login.jsx
-// Page de connexion, avec useState pour chaque champ
 // ============================================================
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
+import { api } from '../api/axios'
 
-function Login() {
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  // fonction appelee quand l utilisateur clique sur "Login"
-  async function handleSubmit(event) {
-    // empeche la page de se recharger
-    event.preventDefault()
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!email || !password) {
+      setError('Remplissez tous les champs')
+      return
+    }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // on garde le token et le role dans le navigateur
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('role', data.user.role)
-        navigate('/')
-      } else {
-        alert(data.message)
-      }
-    } catch (error) {
-      alert('Erreur de connexion au serveur')
+      const res = await api.post('/login', { email, password })
+      localStorage.setItem('token', res.data.token)
+      localStorage.setItem('role', res.data.user.role)
+      navigate('/')
+    } catch {
+      setError('Email ou mot de passe incorrect')
     }
   }
 
@@ -47,7 +35,6 @@ function Login() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
       <div className="w-full max-w-5xl bg-slate-900 rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border border-slate-800">
 
-        {/* Colonne gauche : presentation */}
         <div className="p-10 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-slate-950">
           <div>
             <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-2xl mb-6">
@@ -74,7 +61,6 @@ function Login() {
           </div>
         </div>
 
-        {/* Colonne droite : formulaire */}
         <div className="p-10 flex flex-col justify-center">
           <span className="text-xs tracking-widest text-slate-500 font-semibold">
             ACCESS PORTAL
@@ -83,16 +69,16 @@ function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
 
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
             <div>
               <label className="text-sm text-slate-400">Email</label>
               <input
                 type="email"
-                name="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500"
-                required
               />
             </div>
 
@@ -100,12 +86,10 @@ function Login() {
               <label className="text-sm text-slate-400">Password</label>
               <input
                 type="password"
-                name="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="********"
                 className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500"
-                required
               />
             </div>
 
@@ -127,5 +111,3 @@ function Login() {
     </div>
   )
 }
-
-export default Login
