@@ -32,10 +32,15 @@ exports.ajouterCoursAvecImage = async (req, res) => {
   }
 };
 
+
 exports.listerCours = async (req, res) => {
   try {
-    const cours = await courseService.listerCours();
-    res.json(cours);
+    // on lit les parametres dans l URL, avec des valeurs par defaut
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const resultat = await courseService.listerCoursPagines(page, limit);
+    res.json(resultat);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

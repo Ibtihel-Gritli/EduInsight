@@ -60,3 +60,19 @@ exports.ajouterModule = async (courseId, data) => {
   const nouveauModule = await cours.addModule(data);
   return nouveauModule;
 };
+
+// Lister les cours avec pagination
+exports.listerCoursPagines = async (page, limit) => {
+  const skip = (page - 1) * limit;
+
+  const courses = await Course.find().skip(skip).limit(limit);
+  const total = await Course.countDocuments();
+  const pages = Math.ceil(total / limit);
+
+  return {
+    courses: courses,
+    total: total,
+    page: page,
+    pages: pages,
+  };
+};

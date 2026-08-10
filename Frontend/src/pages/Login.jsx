@@ -1,5 +1,6 @@
 // ============================================================
 // src/pages/Login.jsx
+// Apres connexion, redirige vers le dashboard selon le role
 // ============================================================
 
 import { useState } from 'react'
@@ -23,9 +24,25 @@ export default function Login() {
 
     try {
       const res = await api.post('/login', { email, password })
+
+      // on garde le token et le role dans le navigateur
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('role', res.data.user.role)
-      navigate('/')
+      localStorage.setItem('lastName', res.data.user.lastName)
+
+      // on lit le role recu par le backend
+      const roleConnecte = res.data.user.role
+
+      // et on redirige vers le bon dashboard selon ce role
+      if (roleConnecte === 'admin') {
+        navigate('/admin')
+      }
+      if (roleConnecte === 'teacher') {
+        navigate('/teacher')
+      }
+      if (roleConnecte === 'student') {
+        navigate('/student')
+      }
     } catch {
       setError('Email ou mot de passe incorrect')
     }
