@@ -29,6 +29,7 @@ export default function Login() {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('role', res.data.user.role)
       localStorage.setItem('lastName', res.data.user.lastName)
+      localStorage.setItem('userId', res.data.user.id)
 
       // on lit le role recu par le backend
       const roleConnecte = res.data.user.role

@@ -17,7 +17,7 @@ router.post(
   "/ajouter-avec-image",
   protect,
   authorize(["teacher", "admin"]),
-  upload.single("image"),
+  upload.single("pdf"),
   courseController.ajouterCoursAvecImage
 );
 

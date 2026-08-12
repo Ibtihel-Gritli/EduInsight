@@ -27,10 +27,7 @@ const courseSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    image: {
-      type: String, 
-      default: "",
-    },
+    pdfUrl: { type: String, default: "" },
   },
   {
     timestamps: true, // ajoute createdAt et updatedAt automatiquement

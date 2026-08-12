@@ -14,7 +14,7 @@ exports.ajouterCours = async (req, res) => {
   }
 };
 
-// Ajouter un cours AVEC une image (comme le prof : direct, sans service)
+// Ajouter un cours AVEC pdf
 exports.ajouterCoursAvecImage = async (req, res) => {
   try {
     const nouveauCours = new Course({
@@ -22,7 +22,7 @@ exports.ajouterCoursAvecImage = async (req, res) => {
       description: req.body.description,
       level: req.body.level,
       duration: req.body.duration,
-      image: req.file ? req.file.filename : null,
+      pdfUrl: req.file ? req.file.filename : null,
     });
 
     await nouveauCours.save();
