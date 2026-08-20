@@ -2,10 +2,12 @@
 // controllers/analyticsController.js
 // ============================================================
 
-const QuizAttempt = require("../models/QuizAttempt");
+const { Student, User } = require("../models/User");
 const Inscription = require("../models/Inscription");
 const PerformanceMetric = require("../models/PerformanceMetric");
 const DashboardData = require("../models/DashboardData");
+const QuizAttempt = require("../models/QuizAttempt");
+const Course = require("../models/Course");
 
 exports.generateForStudent = async (req, res) => {
   try {
@@ -49,5 +51,158 @@ exports.generateForAdmin = async (req, res) => {
     res.json({ totalStudents: totalStudents });
   } catch (err) {
     res.status(400).json({ message: "Erreur", error: err.message });
+  }
+};
+
+// Statistiques des students, avec filtres level et status
+exports.studentsStats = async (req, res) => {
+  try {
+    const level = req.query.level;
+    const status = req.query.status;
+
+    const filtre = {};
+    if (level && level !== "all") {
+      filtre.level = level;
+    }
+    if (status === "active") {
+      filtre.isActive = true;
+    }
+    if (status === "inactive") {
+      filtre.isActive = false;
+    }
+
+    const students = await Student.find(filtre);
+    const total = students.length;
+
+    let actifs = 0;
+    let inactifs = 0;
+    let garcons = 0;
+    let filles = 0;
+
+    for (let i = 0; i < students.length; i++) {
+      const etudiant = students[i];
+
+      if (etudiant.isActive === true) {
+        actifs = actifs + 1;
+      } else {
+        inactifs = inactifs + 1;
+      }
+
+      if (etudiant.gender === "M") {
+        garcons = garcons + 1;
+      }
+      if (etudiant.gender === "F") {
+        filles = filles + 1;
+      }
+    }
+
+    const niveaux = {};
+    for (let i = 0; i < students.length; i++) {
+      const niveauActuel = students[i].level || "Non defini";
+      if (niveaux[niveauActuel]) {
+        niveaux[niveauActuel] = niveaux[niveauActuel] + 1;
+      } else {
+        niveaux[niveauActuel] = 1;
+      }
+    }
+
+    const byLevel = [];
+    for (const nom in niveaux) {
+      byLevel.push({ level: nom, count: niveaux[nom] });
+    }
+
+    const byGender = [
+      { gender: "Garcons", count: garcons },
+      { gender: "Filles", count: filles },
+    ];
+
+    const idsEtudiants = students.map(function (s) {
+      return s._id;
+    });
+    const tentatives = await QuizAttempt.find({ student: { $in: idsEtudiants } });
+
+    let moyenneGenerale = 0;
+    if (tentatives.length > 0) {
+      let sommeScores = 0;
+      for (let i = 0; i < tentatives.length; i++) {
+        sommeScores = sommeScores + tentatives[i].score;
+      }
+      moyenneGenerale = sommeScores / tentatives.length;
+    }
+
+    res.json({
+      total: total,
+      actifs: actifs,
+      inactifs: inactifs,
+      garcons: garcons,
+      filles: filles,
+      moyenneGenerale: moyenneGenerale,
+      byLevel: byLevel,
+      byGender: byGender,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
+  }
+};
+
+// Statistiques generales pour le Dashboard Admin
+exports.adminDashboardStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const activeCourses = await Course.countDocuments();
+
+    const totalAttempts = await QuizAttempt.countDocuments();
+    const attemptsSoumises = await QuizAttempt.countDocuments({ submittedAt: { $ne: null } });
+    let quizCompletion = 0;
+    if (totalAttempts > 0) {
+      quizCompletion = Math.round((attemptsSoumises / totalAttempts) * 100);
+    }
+
+    const toutesLesTentatives = await QuizAttempt.find();
+    let avgGrade = 0;
+    if (toutesLesTentatives.length > 0) {
+      let somme = 0;
+      for (let i = 0; i < toutesLesTentatives.length; i++) {
+        somme = somme + toutesLesTentatives[i].score;
+      }
+      avgGrade = Math.round(somme / toutesLesTentatives.length);
+    }
+
+    const tousLesUsers = await User.find().select("createdAt");
+    const parMois = {};
+    for (let i = 0; i < tousLesUsers.length; i++) {
+      const date = new Date(tousLesUsers[i].createdAt);
+      const cle = date.getFullYear() + "-" + (date.getMonth() + 1);
+      if (parMois[cle]) {
+        parMois[cle] = parMois[cle] + 1;
+      } else {
+        parMois[cle] = 1;
+      }
+    }
+    const growth = [];
+    for (const mois in parMois) {
+      growth.push({ mois: mois, users: parMois[mois] });
+    }
+
+    const totalAdmins = await User.countDocuments({ role: "admin" });
+    const totalTeachers = await User.countDocuments({ role: "teacher" });
+    const totalStudents = await User.countDocuments({ role: "student" });
+
+    const distribution = [
+      { role: "Students", count: totalStudents },
+      { role: "Teachers", count: totalTeachers },
+      { role: "Admins", count: totalAdmins },
+    ];
+
+    res.json({
+      totalUsers: totalUsers,
+      activeCourses: activeCourses,
+      quizCompletion: quizCompletion,
+      avgGrade: avgGrade,
+      growth: growth,
+      distribution: distribution,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
   }
 };

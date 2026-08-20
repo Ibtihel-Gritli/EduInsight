@@ -15,9 +15,20 @@ exports.ajouterUtilisateur = async (req, res) => {
   }
 };
 
+// Liste tous les utilisateurs, avec un filtre optionnel par role
+// Exemple d'appel : GET /api/users/list?role=teacher
 exports.listerUtilisateurs = async (req, res) => {
   try {
-    const users = await User.find();
+    const role = req.query.role;
+
+    // On construit le filtre MongoDB en fonction de ce qui est demande
+    const filtre = {};
+
+    if (role && role !== "all") {
+      filtre.role = role;
+    }
+
+    const users = await User.find(filtre);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });

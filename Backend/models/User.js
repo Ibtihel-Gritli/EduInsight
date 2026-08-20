@@ -84,6 +84,7 @@ const teacherSchema = new mongoose.Schema({
   speciality: { type: String },
   office: { type: String },
   department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
+  gender: { type: String, enum: ["M", "F"] },
 });
 
 teacherSchema.methods.createCourse = async function (data) {

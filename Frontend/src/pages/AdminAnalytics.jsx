@@ -1,32 +1,70 @@
+import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
+import axios from 'axios'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import useDarkMode from '../hooks/useDarkMode'
 
 function AdminAnalytics() {
   const role = localStorage.getItem('role')
   const lastName = localStorage.getItem('lastName')
+  const token = localStorage.getItem('token')
 
   if (role !== 'admin') {
     return <Navigate to="/login" />
   }
 
   const darkMode = useDarkMode()
+  const headerAuth = { headers: { Authorization: 'Bearer ' + token } }
+
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeCourses: 0,
+    quizCompletion: 0,
+    avgGrade: 0,
+    growth: [],
+    distribution: [],
+  })
+
+  const [chargement, setChargement] = useState(true)
 
   function handleLogout() {
     localStorage.removeItem('token')
     localStorage.removeItem('role')
     localStorage.removeItem('lastName')
+    localStorage.removeItem('userId')
     window.location.href = '/login'
   }
 
+  function chargerLesStats() {
+    setChargement(true)
+    axios.get(
+      'http://localhost:5000/api/analytics/admin-dashboard',
+      headerAuth
+    ).then(function (res) {
+      setStats(res.data)
+      setChargement(false)
+    }).catch(function (err) {
+      console.log(err)
+      setChargement(false)
+    })
+  }
+
+  useEffect(function () {
+    chargerLesStats()
+  }, [])
+
+  // couleurs pour le diagramme de repartition par role (Students, Teachers, Admins)
+  const couleursRole = ['#22d3ee', '#3b82f6', '#a855f7']
+
   return (
     <div className={'flex min-h-screen ' + darkMode.couleurFond}>
+
       <div className={darkMode.couleurFondMenu + ' w-64 border-r border-slate-800 p-6 flex flex-col justify-between'}>
         <div>
           <h2 className={darkMode.couleurTexte + ' font-bold text-lg mb-1'}>EduInsight</h2>
           <p className="text-cyan-400 text-sm font-medium mb-1">Espace Admin</p>
           <p className="text-slate-500 text-xs mb-6">{lastName}</p>
 
-          <a href="/admin" className="block px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 mb-1">Dashboard</a>
           <a href="/admin/users" className="block px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 mb-1">Users</a>
           <a href="/admin/courses" className="block px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 mb-1">Courses</a>
           <a href="/admin/quizzes" className="block px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-800 mb-1">Quizzes</a>
@@ -47,10 +85,77 @@ function AdminAnalytics() {
       </div>
 
       <div className="flex-1 p-8">
-        <h1 className={darkMode.couleurTexte + ' text-2xl font-bold mb-4'}>Analytics</h1>
-        <div className={darkMode.couleurCarte + ' border rounded-xl p-8'}>
-          Contenu a venir.
-        </div>
+        <h1 className={darkMode.couleurTexte + ' text-2xl font-bold mb-6'}>Analytics</h1>
+
+        {chargement === true ? (
+          <p className="opacity-70">Chargement...</p>
+        ) : (
+          <>
+            {/* 4 cartes */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <div className={darkMode.couleurCarte + ' border rounded-xl p-5'}>
+                <p className="text-sm opacity-70">Total Users</p>
+                <p className="text-2xl font-bold mt-1">{stats.totalUsers}</p>
+              </div>
+              <div className={darkMode.couleurCarte + ' border rounded-xl p-5'}>
+                <p className="text-sm opacity-70">Active Courses</p>
+                <p className="text-2xl font-bold mt-1">{stats.activeCourses}</p>
+              </div>
+              <div className={darkMode.couleurCarte + ' border rounded-xl p-5'}>
+                <p className="text-sm opacity-70">Quiz Completion</p>
+                <p className="text-2xl font-bold mt-1">{stats.quizCompletion}%</p>
+              </div>
+              <div className={darkMode.couleurCarte + ' border rounded-xl p-5'}>
+                <p className="text-sm opacity-70">Avg Grade</p>
+                <p className="text-2xl font-bold mt-1">{stats.avgGrade}%</p>
+              </div>
+            </div>
+
+            {/* Diagrammes */}
+            <div className="grid grid-cols-2 gap-6">
+
+              <div className={darkMode.couleurCarte + ' border rounded-xl p-5'}>
+                <p className="font-medium mb-4">Croissance des utilisateurs</p>
+                {stats.growth.length === 0 ? (
+                  <p className="opacity-70 text-sm">Pas encore de donnees</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={stats.growth}>
+                      <XAxis dataKey="mois" stroke="#94a3b8" />
+                      <YAxis stroke="#94a3b8" allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="users" name="Nouveaux users" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              <div className={darkMode.couleurCarte + ' border rounded-xl p-5'}>
+                <p className="font-medium mb-4">Repartition par role</p>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={stats.distribution}
+                      dataKey="count"
+                      nameKey="role"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+                      {stats.distribution.map(function (entry, index) {
+                        return <Cell key={index} fill={couleursRole[index]} />
+                      })}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

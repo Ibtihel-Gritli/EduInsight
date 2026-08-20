@@ -10,5 +10,6 @@ router.post("/course/:courseId", quizController.createQuiz);
 router.patch("/:id/publish", quizController.publishQuiz);
 router.post("/:quizId/questions", quizController.addQuestion);
 router.delete("/:id", quizController.deleteQuiz);
+router.get("/", quizController.listAllQuizzes);
 
 module.exports = router;

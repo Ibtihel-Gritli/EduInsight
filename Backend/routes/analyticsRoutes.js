@@ -16,5 +16,6 @@ router.get(
   analyticsController.generateForTeacher
 );
 router.get("/admin", protect, authorize(["admin"]), analyticsController.generateForAdmin);
-
+router.get("/students-stats", protect, authorize(["admin"]), analyticsController.studentsStats);
+router.get("/admin-dashboard", protect, authorize(["admin"]), analyticsController.adminDashboardStats);
 module.exports = router;
