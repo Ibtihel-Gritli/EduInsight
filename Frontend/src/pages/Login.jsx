@@ -39,11 +39,11 @@ export default function Login() {
         navigate('/admin')
       }
       if (roleConnecte === 'teacher') {
-        navigate('/teacher')
+        navigate('/teacher/courses')
       }
       if (roleConnecte === 'student') {
-        navigate('/student')
-      }
+        navigate('/student/courses')
+    }
     } catch {
       setError('Email ou mot de passe incorrect')
     }

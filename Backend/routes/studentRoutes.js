@@ -14,6 +14,9 @@ router.post("/ajouter", studentController.ajouterStudent);
 // Lister les students : protege, admin et teacher peuvent voir
 router.get("/list", protect, authorize(["admin", "teacher"]), studentController.listerStudents);
 
+// Students inscrits aux cours du teacher connecte, avec Enrolled + Avg Grade
+router.get("/teacher-students", protect, authorize(["teacher"]), studentController.listStudentsByTeacher);
+
 // Un student s inscrit a un cours : protege, seulement student
 router.post(
   "/:id/inscrire-cours",

@@ -31,4 +31,7 @@ router.delete("/:id", protect, authorize(["teacher", "admin"]), courseController
 
 router.post("/:id/ajouter-module", protect, authorize(["teacher", "admin"]), courseController.ajouterModule);
 
+router.get("/students-of/:teacherId", protect, authorize(["teacher"]), courseController.studentsDuTeacher);
+router.delete("/students-of/:teacherId/:studentId", protect, authorize(["teacher"]), courseController.retirerStudent);
+
 module.exports = router;

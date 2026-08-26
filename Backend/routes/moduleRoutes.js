@@ -4,7 +4,9 @@ const moduleController = require("../controllers/moduleController");
 const protect = require("../middlewares/authMiddleware");
 const authorize = require("../middlewares/roleMiddleware");
 
-// Toutes les routes ici sont protegees : reservees a teacher et admin
+router.get("/course/:courseId", protect, moduleController.getModulesByCourse);
+
+// Toutes les routes ci-dessous sont protegees : reservees a teacher et admin
 router.use(protect, authorize(["teacher", "admin"]));
 
 // Routes pour les Modules

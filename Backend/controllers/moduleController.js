@@ -82,3 +82,48 @@ exports.deleteLesson = async (req, res) => {
     res.status(500).json({ message: "Erreur de suppression", error: err.message });
   }
 };
+
+// Recupere tous les modules d'un cours, avec leurs lecons a l interieur
+// Utilise par les students pour voir le contenu d un cours
+exports.getModulesByCourse = async (req, res) => {
+  try {
+    const modules = await Module.find({ course: req.params.courseId }).sort({ order: 1 });
+
+    // Pour chaque module, on va chercher ses lecons
+    const modulesAvecLecons = [];
+
+    for (let i = 0; i < modules.length; i++) {
+      const lecons = await Lesson.find({ module: modules[i]._id }).sort({ order: 1 });
+
+      // .toObject() permet d ajouter une propriete "lessons" au module
+      const moduleObjet = modules[i].toObject();
+      moduleObjet.lessons = lecons;
+
+      modulesAvecLecons.push(moduleObjet);
+    }
+
+    res.json(modulesAvecLecons);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
+  }
+};
+
+
+// Recupere tous les modules d un cours, avec leurs lecons dedans
+exports.getModulesByCourse = async (req, res) => {
+  try {
+    const modules = await Module.find({ course: req.params.courseId });
+    const resultat = [];
+
+    for (let i = 0; i < modules.length; i++) {
+      const lecons = await Lesson.find({ module: modules[i]._id });
+      const moduleObjet = modules[i].toObject();
+      moduleObjet.lessons = lecons;
+      resultat.push(moduleObjet);
+    }
+
+    res.json(resultat);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
+  }
+};

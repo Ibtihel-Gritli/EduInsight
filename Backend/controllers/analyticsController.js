@@ -206,3 +206,90 @@ exports.adminDashboardStats = async (req, res) => {
     res.status(500).json({ message: "Erreur", error: err.message });
   }
 };
+
+// Calcule la progression d un student : cours completes, moyenne generale,
+// historique des scores de quiz, et le detail par cours
+exports.studentProgress = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Toutes les inscriptions du student, avec les infos du cours
+    const inscriptions = await Inscription.find({ student: studentId }).populate("course");
+
+    // Toutes les tentatives de quiz du student, avec le quiz ET le cours du quiz
+    const tentatives = await QuizAttempt.find({ student: studentId })
+      .populate({ path: "quiz", populate: { path: "course" } })
+      .sort({ startedAt: 1 }); // du plus ancien au plus recent, pour l historique
+
+    // --- Carte "Courses Completed" ---
+    let coursesCompleted = 0;
+    for (let i = 0; i < inscriptions.length; i++) {
+      if (inscriptions[i].status === "completed") {
+        coursesCompleted = coursesCompleted + 1;
+      }
+    }
+
+    // --- Carte "Average Grade" ---
+    let avgGrade = 0;
+    if (tentatives.length > 0) {
+      let somme = 0;
+      for (let i = 0; i < tentatives.length; i++) {
+        somme = somme + tentatives[i].score;
+      }
+      avgGrade = Math.round(somme / tentatives.length);
+    }
+
+    // --- Graphique "Grade History" : un point par tentative de quiz ---
+    const gradeHistory = [];
+    for (let i = 0; i < tentatives.length; i++) {
+      gradeHistory.push({
+        label: "Quiz " + (i + 1),
+        score: tentatives[i].score,
+      });
+    }
+
+    // --- Tableau du bas : moyenne et statut pour chaque cours inscrit ---
+    const courses = [];
+
+    for (let i = 0; i < inscriptions.length; i++) {
+      const inscriptionActuelle = inscriptions[i];
+
+      // on ne garde que les tentatives dont le quiz appartient a CE cours
+      const tentativesDeCeCours = [];
+      for (let j = 0; j < tentatives.length; j++) {
+        const quizActuel = tentatives[j].quiz;
+        if (quizActuel && quizActuel.course && inscriptionActuelle.course) {
+          if (quizActuel.course._id.toString() === inscriptionActuelle.course._id.toString()) {
+            tentativesDeCeCours.push(tentatives[j]);
+          }
+        }
+      }
+
+      let moyenneDuCours = 0;
+      if (tentativesDeCeCours.length > 0) {
+        let somme = 0;
+        for (let j = 0; j < tentativesDeCeCours.length; j++) {
+          somme = somme + tentativesDeCeCours[j].score;
+        }
+        moyenneDuCours = Math.round(somme / tentativesDeCeCours.length);
+      }
+
+      const statut = inscriptionActuelle.status === "completed" ? "Completed" : "In Progress";
+
+      courses.push({
+        title: inscriptionActuelle.course ? inscriptionActuelle.course.title : "Cours supprime",
+        grade: moyenneDuCours,
+        status: statut,
+      });
+    }
+
+    res.json({
+      coursesCompleted: coursesCompleted,
+      avgGrade: avgGrade,
+      gradeHistory: gradeHistory,
+      courses: courses,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
+  }
+};

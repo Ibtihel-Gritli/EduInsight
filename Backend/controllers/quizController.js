@@ -183,3 +183,131 @@ exports.listAllQuizzes = async (req, res) => {
     res.status(500).json({ message: "Erreur", error: err.message });
   }
 };
+
+exports.updateQuiz = async (req, res) => {
+  try {
+    const quiz = await Quiz.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!quiz) {
+      return res.status(404).json({ message: "Quiz non trouve" });
+    }
+    res.json(quiz);
+  } catch (err) {
+    res.status(400).json({ message: "Erreur de mise a jour", error: err.message });
+  }
+};
+
+// ------------------------------------------------------------
+// Recupere un quiz avec toutes ses questions et leurs choix
+// Utilise par le student quand il clique sur "Start"
+// ------------------------------------------------------------
+exports.getQuizWithQuestions = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    const questions = await Question.find({ quiz: req.params.id });
+
+    const questionsAvecChoix = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const choix = await Choice.find({ question: question._id });
+
+      questionsAvecChoix.push({
+        _id: question._id,
+        statement: question.statement,
+        type: question.type,
+        points: question.points,
+        choices: choix,
+      });
+    }
+
+    res.json({ quiz: quiz, questions: questionsAvecChoix });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
+  }
+};
+
+// ------------------------------------------------------------
+// Recupere un quiz avec toutes ses questions et leurs choix
+// Utilise par le student quand il clique sur "Start"
+// ------------------------------------------------------------
+exports.getQuizWithQuestions = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    const questions = await Question.find({ quiz: req.params.id });
+
+    const questionsAvecChoix = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const choix = await Choice.find({ question: question._id });
+
+      questionsAvecChoix.push({
+        _id: question._id,
+        statement: question.statement,
+        type: question.type,
+        points: question.points,
+        choices: choix,
+      });
+    }
+
+    res.json({ quiz: quiz, questions: questionsAvecChoix });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur", error: err.message });
+  }
+};
+
+exports.replaceQuestions = async (req, res) => {
+  try {
+    const idDuQuiz = req.params.id;
+    const questionsJson = req.body.questions;
+
+    const anciennesQuestions = await Question.find({ quiz: idDuQuiz });
+    const idsAnciennesQuestions = anciennesQuestions.map(function (q) {
+      return q._id;
+    });
+    await Choice.deleteMany({ question: { $in: idsAnciennesQuestions } });
+    await Question.deleteMany({ quiz: idDuQuiz });
+
+    for (let i = 0; i < questionsJson.length; i++) {
+      const item = questionsJson[i];
+
+      let typePourLaBase = "MCQ";
+      if (item.type === "tf") {
+        typePourLaBase = "TrueFalse";
+      }
+
+      const questionCree = await Question.create({
+        quiz: idDuQuiz,
+        statement: item.q,
+        type: typePourLaBase,
+        points: 1,
+        order: i,
+      });
+
+      if (item.type === "mcq" && item.options) {
+        const choixACreer = [];
+        for (let j = 0; j < item.options.length; j++) {
+          choixACreer.push({
+            question: questionCree._id,
+            text: item.options[j],
+            isCorrect: j === item.correct,
+            order: j,
+          });
+        }
+        await Choice.insertMany(choixACreer);
+      }
+
+      if (item.type === "tf") {
+        await Choice.create({ question: questionCree._id, text: "Vrai", isCorrect: item.correct === true, order: 0 });
+        await Choice.create({ question: questionCree._id, text: "Faux", isCorrect: item.correct === false, order: 1 });
+      }
+    }
+
+    res.json({ message: "Questions mises a jour" });
+  } catch (err) {
+    res.status(400).json({ message: "Erreur", error: err.message });
+  }
+};
