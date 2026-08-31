@@ -29,6 +29,7 @@ app.use("/api/quizzes", require("./routes/quizRoutes"));
 app.use("/api/quiz-attempts", require("./routes/quizAttemptRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/chat", require("./routes/chatRoutes"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -1,3 +1,4 @@
+import Chatbot from './components/ai/Chatbot'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -61,6 +62,8 @@ function App() {
         <Route path="/admin/docs" element={<AdminDocs />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
       </Routes>
+
+      <Chatbot />
     </BrowserRouter>
   )
 }
