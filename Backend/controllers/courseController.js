@@ -1,9 +1,11 @@
 // ============================================================
 // controllers/courseController.js
 // ============================================================
+const Inscription = require("../models/Inscription");
 
 const Course = require("../models/Course");
 const courseService = require("../services/courseService");
+
 
 exports.ajouterCours = async (req, res) => {
   try {
@@ -74,8 +76,13 @@ exports.updateCours = async (req, res) => {
   }
 };
 
+
 exports.deleteCours = async (req, res) => {
   try {
+    // on supprime d abord toutes les inscriptions liees a ce cours,
+    // pour eviter des inscriptions "orphelines" qui pointent vers rien
+    await Inscription.deleteMany({ course: req.params.id });
+
     const coursSupprime = await courseService.deleteCours(req.params.id);
     if (!coursSupprime) {
       return res.status(404).json({ message: "Cours non trouve" });
@@ -95,58 +102,38 @@ exports.ajouterModule = async (req, res) => {
   }
 };
 
-const Inscription = require("../models/Inscription");
 const QuizAttempt = require("../models/QuizAttempt");
 const Quiz = require("../models/Quiz");
+
+// Liste les students inscrits aux cours d un teacher precis, avec leur moyenne
+const gradeService = require("../services/gradeService"); // ajoute cet import en haut du fichier
 
 // Liste les students inscrits aux cours d un teacher precis, avec leur moyenne
 exports.studentsDuTeacher = async (req, res) => {
   try {
     const idDuTeacher = req.params.teacherId;
 
-    // 1. tous les cours de ce teacher
     const cours = await Course.find({ teacher: idDuTeacher });
     const idsDesCours = cours.map(function (c) {
       return c._id;
     });
 
-    // 2. toutes les inscriptions a ces cours, avec les infos du student et du cours
     const inscriptions = await Inscription.find({ course: { $in: idsDesCours } })
       .populate("student")
       .populate("course");
-
-    // 3. tous les quiz de ces cours (pour calculer la moyenne apres)
-    const quizzes = await Quiz.find({ course: { $in: idsDesCours } });
-    const idsDesQuiz = quizzes.map(function (q) {
-      return q._id;
-    });
 
     const resultat = [];
 
     for (let i = 0; i < inscriptions.length; i++) {
       const inscription = inscriptions[i];
 
-      // compte combien de cours de ce teacher ce student a rejoint
       const inscriptionsDeCeStudent = inscriptions.filter(function (ins) {
         return ins.student._id.toString() === inscription.student._id.toString();
       });
 
-      // recupere les tentatives de quiz de ce student, seulement pour les quiz de ce teacher
-      const tentatives = await QuizAttempt.find({
-        student: inscription.student._id,
-        quiz: { $in: idsDesQuiz },
-      });
+      // Meme formule centralisee, mais scopee UNIQUEMENT sur les cours de ce teacher
+      const moyenne = await gradeService.calculerAvgGrade(inscription.student._id, idsDesCours);
 
-      let moyenne = 0;
-      if (tentatives.length > 0) {
-        let somme = 0;
-        for (let j = 0; j < tentatives.length; j++) {
-          somme = somme + tentatives[j].score;
-        }
-        moyenne = somme / tentatives.length;
-      }
-
-      // evite les doublons si le student est inscrit a plusieurs cours du meme teacher
       const dejaAjoute = resultat.find(function (r) {
         return r.studentId === inscription.student._id.toString();
       });

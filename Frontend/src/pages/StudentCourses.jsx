@@ -64,12 +64,19 @@ function StudentCourses() {
       })
   }
 
-  function chargerLaMoyenne() {
-    axios.get('http://localhost:5000/api/analytics/student', headerAuth)
-      .then(function (res) {
-        setAvgGrade(res.data.averageScore || 0)
-      })
-  }
+function chargerLaMoyenne() {
+  axios.get(
+    'http://localhost:5000/api/analytics/student-progress',
+    headerAuth
+  )
+    .then(function (res) {
+      setAvgGrade(res.data.avgGrade || 0);
+    })
+    .catch(function (err) {
+      console.log("Erreur moyenne :", err);
+      setAvgGrade(0);
+    });
+}
 
   useEffect(function () {
     chargerLesCours()

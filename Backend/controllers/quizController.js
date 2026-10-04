@@ -19,7 +19,6 @@ const Choice = require("../models/Choice");
 // ------------------------------------------------------------
 exports.createQuiz = async (req, res) => {
   try {
-    // Etape 1 : on cree d'abord le quiz (sans les questions)
     const nouveauQuiz = await Quiz.create({
       course: req.params.courseId,
       title: req.body.title,
@@ -29,14 +28,10 @@ exports.createQuiz = async (req, res) => {
 
     const listeDesQuestions = req.body.questions;
 
-    // Etape 2 : si on a recu des questions, on les cree une par une
     if (listeDesQuestions && listeDesQuestions.length > 0) {
       for (let i = 0; i < listeDesQuestions.length; i++) {
         const questionActuelle = listeDesQuestions[i];
 
-        // Dans notre model, le type s'ecrit "MCQ" ou "TrueFalse"
-        // mais dans le formulaire simple on ecrit juste "mcq" ou "tf"
-        // Ici on fait la conversion entre les deux
         let typePourLaBase = "MCQ";
         if (questionActuelle.type === "tf") {
           typePourLaBase = "TrueFalse";
@@ -50,15 +45,13 @@ exports.createQuiz = async (req, res) => {
           order: i,
         });
 
-        // Etape 3 : si la question a des choix (A, B, C, D...), on les cree aussi
+        // Questions a choix multiple (mcq)
         const listeDesChoix = questionActuelle.options;
 
-        if (listeDesChoix && listeDesChoix.length > 0) {
+        if (questionActuelle.type === "mcq" && listeDesChoix && listeDesChoix.length > 0) {
           const choixACreer = [];
 
           for (let j = 0; j < listeDesChoix.length; j++) {
-            // "correct" dans le JSON est l'INDEX de la bonne reponse
-            // exemple : correct = 0 veut dire que options[0] est la bonne reponse
             const estLaBonneReponse = j === questionActuelle.correct;
 
             choixACreer.push({
@@ -69,9 +62,23 @@ exports.createQuiz = async (req, res) => {
             });
           }
 
-          // insertMany cree plusieurs documents MongoDB en une seule requete
-          // (plus rapide que de faire un .create() dans une boucle)
           await Choice.insertMany(choixACreer);
+        }
+
+        // Questions Vrai/Faux (tf) : cree les 2 choix manquants avant
+        if (questionActuelle.type === "tf") {
+          await Choice.create({
+            question: questionCree._id,
+            text: "Vrai",
+            isCorrect: questionActuelle.correct === true,
+            order: 0,
+          });
+          await Choice.create({
+            question: questionCree._id,
+            text: "Faux",
+            isCorrect: questionActuelle.correct === false,
+            order: 1,
+          });
         }
       }
     }

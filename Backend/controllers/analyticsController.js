@@ -8,21 +8,36 @@ const PerformanceMetric = require("../models/PerformanceMetric");
 const DashboardData = require("../models/DashboardData");
 const QuizAttempt = require("../models/QuizAttempt");
 const Course = require("../models/Course");
+const Question = require("../models/Question");
+const gradeService = require("../services/gradeService");
 
+// Calcule le pourcentage reel d une tentative : score obtenu / score total possible du quiz
+// (utilise seulement pour Grade History et le tableau par cours, PAS pour Avg Grade)
+async function calculerPourcentage(scoreObtenu, idDuQuiz) {
+  const questions = await Question.find({ quiz: idDuQuiz });
+
+  let totalPossible = 0;
+  for (let i = 0; i < questions.length; i++) {
+    totalPossible = totalPossible + questions[i].points;
+  }
+
+  if (totalPossible === 0) {
+    return 0;
+  }
+
+  return Math.round((scoreObtenu / totalPossible) * 100);
+}
+
+// Utilise par la page StudentCourses (carte "Avg Grade")
 exports.generateForStudent = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const attempts = await QuizAttempt.find({ student: studentId });
-    const enrollments = await Inscription.find({ student: studentId });
 
+    const enrollments = await Inscription.find({ student: studentId });
     const totalCourses = enrollments.length;
 
-    let sommeScores = 0;
-    for (let i = 0; i < attempts.length; i++) {
-      sommeScores = sommeScores + attempts[i].score;
-    }
-    const nombreTentatives = attempts.length > 0 ? attempts.length : 1;
-    const averageScore = sommeScores / nombreTentatives;
+    // Meme formule que My Progress, via le service centralise
+    const averageScore = await gradeService.calculerAvgGrade(studentId);
 
     const dashboard = await DashboardData.findOneAndUpdate(
       { user: studentId },
@@ -116,18 +131,15 @@ exports.studentsStats = async (req, res) => {
       { gender: "Filles", count: filles },
     ];
 
-    const idsEtudiants = students.map(function (s) {
-      return s._id;
-    });
-    const tentatives = await QuizAttempt.find({ student: { $in: idsEtudiants } });
-
+    // Moyenne generale de tous ces students, avec la meme formule centralisee
+    let sommeAvgGrades = 0;
+    for (let i = 0; i < students.length; i++) {
+      const g = await gradeService.calculerAvgGrade(students[i]._id);
+      sommeAvgGrades = sommeAvgGrades + g;
+    }
     let moyenneGenerale = 0;
-    if (tentatives.length > 0) {
-      let sommeScores = 0;
-      for (let i = 0; i < tentatives.length; i++) {
-        sommeScores = sommeScores + tentatives[i].score;
-      }
-      moyenneGenerale = sommeScores / tentatives.length;
+    if (students.length > 0) {
+      moyenneGenerale = Math.round(sommeAvgGrades / students.length);
     }
 
     res.json({
@@ -158,14 +170,16 @@ exports.adminDashboardStats = async (req, res) => {
       quizCompletion = Math.round((attemptsSoumises / totalAttempts) * 100);
     }
 
-    const toutesLesTentatives = await QuizAttempt.find();
+    // Avg Grade = moyenne du Avg Grade (meme formule) de CHAQUE student de la plateforme
+    const tousLesStudents = await Student.find();
+    let sommeAvgGrades = 0;
+    for (let i = 0; i < tousLesStudents.length; i++) {
+      const g = await gradeService.calculerAvgGrade(tousLesStudents[i]._id);
+      sommeAvgGrades = sommeAvgGrades + g;
+    }
     let avgGrade = 0;
-    if (toutesLesTentatives.length > 0) {
-      let somme = 0;
-      for (let i = 0; i < toutesLesTentatives.length; i++) {
-        somme = somme + toutesLesTentatives[i].score;
-      }
-      avgGrade = Math.round(somme / toutesLesTentatives.length);
+    if (tousLesStudents.length > 0) {
+      avgGrade = Math.round(sommeAvgGrades / tousLesStudents.length);
     }
 
     const tousLesUsers = await User.find().select("createdAt");
@@ -207,21 +221,34 @@ exports.adminDashboardStats = async (req, res) => {
   }
 };
 
-// Calcule la progression d un student : cours completes, moyenne generale,
+// Calcule la progression d un student : cours completes, avancement moyen,
 // historique des scores de quiz, et le detail par cours
 exports.studentProgress = async (req, res) => {
   try {
     const studentId = req.user.id;
 
-    // Toutes les inscriptions du student, avec les infos du cours
     const inscriptions = await Inscription.find({ student: studentId }).populate("course");
 
-    // Toutes les tentatives de quiz du student, avec le quiz ET le cours du quiz
-    const tentatives = await QuizAttempt.find({ student: studentId })
+    const tentatives = await QuizAttempt.find({
+      student: studentId,
+      submittedAt: { $ne: null },
+    })
       .populate({ path: "quiz", populate: { path: "course" } })
-      .sort({ startedAt: 1 }); // du plus ancien au plus recent, pour l historique
+      .sort({ startedAt: 1 });
 
-    // --- Carte "Courses Completed" ---
+    const tentativesAvecPourcentage = [];
+    for (let i = 0; i < tentatives.length; i++) {
+      if (!tentatives[i].quiz) {
+        continue;
+      }
+
+      const pourcentage = await calculerPourcentage(tentatives[i].score, tentatives[i].quiz._id);
+      tentativesAvecPourcentage.push({
+        quiz: tentatives[i].quiz,
+        pourcentage: pourcentage,
+      });
+    }
+
     let coursesCompleted = 0;
     for (let i = 0; i < inscriptions.length; i++) {
       if (inscriptions[i].status === "completed") {
@@ -229,38 +256,38 @@ exports.studentProgress = async (req, res) => {
       }
     }
 
-    // --- Carte "Average Grade" ---
-    let avgGrade = 0;
-    if (tentatives.length > 0) {
-      let somme = 0;
-      for (let i = 0; i < tentatives.length; i++) {
-        somme = somme + tentatives[i].score;
-      }
-      avgGrade = Math.round(somme / tentatives.length);
-    }
+    // Avg Grade : meme formule centralisee que My Courses / Teacher / Admin
+    const avgGrade = await gradeService.calculerAvgGrade(studentId);
 
-    // --- Graphique "Grade History" : un point par tentative de quiz ---
+    // Grade History reste base sur les notes de quiz (utile pour voir l evolution des scores)
+    const compteurParQuiz = {};
     const gradeHistory = [];
-    for (let i = 0; i < tentatives.length; i++) {
+
+    for (let i = 0; i < tentativesAvecPourcentage.length; i++) {
+      const titreDuQuiz = tentativesAvecPourcentage[i].quiz.title;
+
+      if (compteurParQuiz[titreDuQuiz] === undefined) {
+        compteurParQuiz[titreDuQuiz] = 0;
+      }
+      compteurParQuiz[titreDuQuiz] = compteurParQuiz[titreDuQuiz] + 1;
+
       gradeHistory.push({
-        label: "Quiz " + (i + 1),
-        score: tentatives[i].score,
+        label: titreDuQuiz + " " + compteurParQuiz[titreDuQuiz],
+        score: tentativesAvecPourcentage[i].pourcentage,
       });
     }
 
-    // --- Tableau du bas : moyenne et statut pour chaque cours inscrit ---
     const courses = [];
 
     for (let i = 0; i < inscriptions.length; i++) {
       const inscriptionActuelle = inscriptions[i];
 
-      // on ne garde que les tentatives dont le quiz appartient a CE cours
       const tentativesDeCeCours = [];
-      for (let j = 0; j < tentatives.length; j++) {
-        const quizActuel = tentatives[j].quiz;
+      for (let j = 0; j < tentativesAvecPourcentage.length; j++) {
+        const quizActuel = tentativesAvecPourcentage[j].quiz;
         if (quizActuel && quizActuel.course && inscriptionActuelle.course) {
           if (quizActuel.course._id.toString() === inscriptionActuelle.course._id.toString()) {
-            tentativesDeCeCours.push(tentatives[j]);
+            tentativesDeCeCours.push(tentativesAvecPourcentage[j]);
           }
         }
       }
@@ -269,7 +296,7 @@ exports.studentProgress = async (req, res) => {
       if (tentativesDeCeCours.length > 0) {
         let somme = 0;
         for (let j = 0; j < tentativesDeCeCours.length; j++) {
-          somme = somme + tentativesDeCeCours[j].score;
+          somme = somme + tentativesDeCeCours[j].pourcentage;
         }
         moyenneDuCours = Math.round(somme / tentativesDeCeCours.length);
       }

@@ -1,8 +1,6 @@
 import Chatbot from './components/ai/Chatbot'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Header from './components/Header'
-import Footer from './components/Footer'
-import Home from './pages/Home'
+import RecommendationBell from './components/recommendations/RecommendationBell'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -31,13 +29,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <Home />
-            <Footer />
-          </div>
-        } />
+        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -62,8 +54,8 @@ function App() {
         <Route path="/admin/docs" element={<AdminDocs />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
       </Routes>
-
       <Chatbot />
+      <RecommendationBell />
     </BrowserRouter>
   )
 }
